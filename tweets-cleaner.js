@@ -2,7 +2,6 @@
 
 const chalk = require('chalk')
 const Twitter = require('twitter')
-const Converter = require('csvtojson').Converter
 const jsonfile = require('jsonfile')
 const config = require('./config')
 
@@ -24,18 +23,17 @@ const client = new Twitter({
   access_token_secret: config.access_token_secret
 })
 
-const converter = new Converter({checkType: false})
-converter.fromFile(config.path, (err, json) => {
+jsonfile.readFile(config.path, (err, json) => {
   if (err || !json) {
-    return console.log(chalk.red('NO VALID JSON CONVERTED!'))
+    return console.log(chalk.red('NO VALID JSON FILE! Be sure the first line of your tweet.js file is only a ['))
   }
 
-  const logIds = log.map(l => l.tweet_id)
+  const logIds = log.map(l => l.id_str)
   const tweets = json.filter(t => {
-    const hasId = !isNaN(parseInt(t.tweet_id))
-    const oldEnough = new Date(t.timestamp) < maxDate
-    const shouldBeSaved = config.saveRegexp.some((regexp) => new RegExp(regexp).test(t.text))
-    const notDeleted = logIds.indexOf(t.tweet_id) === -1
+    const hasId = !isNaN(parseInt(t.id_str))
+    const oldEnough = new Date(t.created_at) < maxDate
+    const shouldBeSaved = config.saveRegexp.some((regexp) => new RegExp(regexp).test(t.full_text))
+    const notDeleted = logIds.indexOf(t.id_str) === -1
     return hasId && oldEnough && notDeleted && !shouldBeSaved
   })
 
@@ -51,7 +49,7 @@ function deleteTweet (tweets, i) {
   let next = config.callsInterval
   let remaining = 0
 
-  client.post('statuses/destroy', {id: tweets[i].tweet_id}, function (err, t, res) {
+  client.post('statuses/destroy', {id: tweets[i].id_str}, function (err, t, res) {
     remaining = parseInt(res.headers['x-rate-limit-remaining'])
 
     if (!isNaN(remaining) && remaining === 0) {
@@ -62,7 +60,7 @@ function deleteTweet (tweets, i) {
         console.log(chalk.yellow(JSON.stringify(err)))
       } else {
         log.push(tweets[i])
-        console.log(chalk.green(`Deleted -> ${tweets[i].tweet_id} | ${tweets[i].text}`))
+        console.log(chalk.green(`Deleted -> ${tweets[i].id_str} | ${tweets[i].full_text}`))
       }
     }
 
