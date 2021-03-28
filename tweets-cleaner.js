@@ -30,13 +30,12 @@ jsonfile.readFile(config.path, (err, json) => {
 
   const logIds = log.map(l => l.id_str)
   const tweets = json.filter(t => {
-    const hasId = !isNaN(parseInt(t.id_str))
-    const oldEnough = new Date(t.created_at) < maxDate
-    const shouldBeSaved = config.saveRegexp.some((regexp) => new RegExp(regexp).test(t.full_text))
-    const notDeleted = logIds.indexOf(t.id_str) === -1
+    const hasId = !isNaN(parseInt(t.tweet.id_str))
+    const oldEnough = new Date(t.tweet.created_at) < maxDate
+    const shouldBeSaved = config.saveRegexp.some((regexp) => new RegExp(regexp).test(t.tweet.full_text))
+    const notDeleted = logIds.indexOf(t.tweet.id_str) === -1
     return hasId && oldEnough && notDeleted && !shouldBeSaved
   })
-
   if (!tweets || !tweets.length) {
     return console.log(chalk.green('No more tweets to delete!'))
   }
@@ -49,7 +48,7 @@ function deleteTweet (tweets, i) {
   let next = config.callsInterval
   let remaining = 0
 
-  client.post('statuses/destroy', {id: tweets[i].id_str}, function (err, t, res) {
+  client.post('statuses/destroy', {id: tweets[i].tweet.id_str}, function (err, t, res) {
     remaining = parseInt(res.headers['x-rate-limit-remaining'])
 
     if (!isNaN(remaining) && remaining === 0) {
@@ -60,7 +59,7 @@ function deleteTweet (tweets, i) {
         console.log(chalk.yellow(JSON.stringify(err)))
       } else {
         log.push(tweets[i])
-        console.log(chalk.green(`Deleted -> ${tweets[i].id_str} | ${tweets[i].full_text}`))
+        console.log(chalk.green(`Deleted -> ${tweets[i].tweet.id_str} | ${tweets[i].tweet.full_text}`))
       }
     }
 
